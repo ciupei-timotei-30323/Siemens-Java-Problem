@@ -19,7 +19,7 @@ public class Route {
     private String name;
 
     // Ordered list of stations on this route
-    @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     @OrderBy("stopOrder ASC")
     private List<RouteStation> routeStations;
 }

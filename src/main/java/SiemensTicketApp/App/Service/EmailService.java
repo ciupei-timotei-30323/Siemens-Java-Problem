@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,6 +16,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    @Async
     public void sendBookingConfirmation(Booking booking) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(booking.getCustomerEmail());
@@ -35,6 +37,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendDelayNotification(Booking booking, int delayMinutes) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(booking.getCustomerEmail());

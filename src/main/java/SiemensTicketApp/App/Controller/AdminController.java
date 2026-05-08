@@ -1,7 +1,8 @@
 package SiemensTicketApp.App.Controller;
 
-import SiemensTicketApp.App.Model.Route;
-import SiemensTicketApp.App.Model.Train;
+import SiemensTicketApp.App.DTO.RouteRequest;
+import SiemensTicketApp.App.DTO.TrainRequest;
+import SiemensTicketApp.App.Model.Station;
 import SiemensTicketApp.App.Service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,10 @@ public class AdminController {
     public ResponseEntity<?> getTrains() { return ResponseEntity.ok(adminService.getAllTrains()); }
 
     @PostMapping("/trains")
-    public ResponseEntity<?> addTrain(@RequestBody Train train) { return ResponseEntity.ok(adminService.addTrain(train)); }
+    public ResponseEntity<?> addTrain(@RequestBody TrainRequest train) { return ResponseEntity.ok(adminService.addTrain(train)); }
 
     @PutMapping("/trains/{id}")
-    public ResponseEntity<?> updateTrain(@PathVariable Long id, @RequestBody Train train) { return ResponseEntity.ok(adminService.updateTrain(id, train)); }
+    public ResponseEntity<?> updateTrain(@PathVariable Long id, @RequestBody TrainRequest train) { return ResponseEntity.ok(adminService.updateTrain(id, train)); }
 
     @DeleteMapping("/trains/{id}")
     public ResponseEntity<?> deleteTrain(@PathVariable Long id) { adminService.deleteTrain(id); return ResponseEntity.noContent().build(); }
@@ -31,10 +32,10 @@ public class AdminController {
     public ResponseEntity<?> getRoutes() { return ResponseEntity.ok(adminService.getAllRoutes()); }
 
     @PostMapping("/routes")
-    public ResponseEntity<?> addRoute(@RequestBody Route route) { return ResponseEntity.ok(adminService.addRoute(route)); }
+    public ResponseEntity<?> addRoute(@RequestBody RouteRequest route) { return ResponseEntity.ok(adminService.addRoute(route)); }
 
     @PutMapping("/routes/{id}")
-    public ResponseEntity<?> updateRoute(@PathVariable Long id, @RequestBody Route route) { return ResponseEntity.ok(adminService.updateRoute(id, route)); }
+    public ResponseEntity<?> updateRoute(@PathVariable Long id, @RequestBody RouteRequest route) { return ResponseEntity.ok(adminService.updateRoute(id, route)); }
 
     @DeleteMapping("/routes/{id}")
     public ResponseEntity<?> deleteRoute(@PathVariable Long id) { adminService.deleteRoute(id); return ResponseEntity.noContent().build(); }
@@ -49,4 +50,15 @@ public class AdminController {
         adminService.reportDelay(scheduleId, minutes);
         return ResponseEntity.ok("Delay reported and customers notified.");
     }
+
+    // Stations
+    @PostMapping("/station")
+    public ResponseEntity<?> addStation(@RequestBody Station station) {return ResponseEntity.ok(adminService.addStation(station));}
+
+    @PutMapping("/station/{stationId}")
+    public ResponseEntity<?> modifyStation(@PathVariable Long stationId, @RequestBody Station station) {return ResponseEntity.ok(adminService.updateStation(stationId, station));}
+
+    @DeleteMapping("/station/{id}")
+    public ResponseEntity<?> deleteStation(@PathVariable Long id) {adminService.deleteStation(id); return ResponseEntity.noContent().build();}
+
 }

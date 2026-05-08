@@ -53,7 +53,7 @@ public class RouteFinderService {
             }
         }
 
-        // Check one-changeover connections
+// Check one-changeover connections
         for (Route routeA : allRoutes) {
             List<RouteStation> stopsA = routeA.getRouteStations();
             int originIndex = indexOfStation(stopsA, origin.getId());
@@ -72,20 +72,49 @@ public class RouteFinderService {
 
                     if (changeoverIndexB != -1 && changeoverIndexB < destIndex) {
                         // Valid changeover found
-                        List<String> pathA = stopsA.subList(originIndex, i + 1)
-                                .stream().map(rs -> rs.getStation().getName()).toList();
-                        List<String> pathB = stopsB.subList(changeoverIndexB + 1, destIndex + 1)
-                                .stream().map(rs -> rs.getStation().getName()).toList();
+                        List<Train> trainsA = trainRepository.findByRouteId(routeA.getId());
+                        List<Train> trainsB = trainRepository.findByRouteId(routeB.getId());
 
-                        List<String> fullPath = new ArrayList<>(pathA);
-                        fullPath.addAll(pathB);
+                        if (trainsA.isEmpty() || trainsB.isEmpty()) continue;
 
-                        results.add(TripOption.builder()
-                                .stations(fullPath)
-                                .trainNames(List.of(getTrainNameForRoute(routeA), getTrainNameForRoute(routeB)))
-                                .departureTimes(getDepartureTimes(routeA, routeB))
-                                .requiresChangeover(true)
-                                .build());
+                        // For simplicity, taking the first train on the route
+                        Train trainA = trainsA.get(0);
+                        Train trainB = trainsB.get(0);
+
+                        List<Schedule> schedulesA = scheduleRepository.findByTrainId(trainA.getId());
+                        List<Schedule> schedulesB = scheduleRepository.findByTrainId(trainB.getId());
+
+                        // Find valid matching schedules (Train B must depart AFTER Train A)
+                        List<String> pairedDepartureTimes = new ArrayList<>();
+                        for (Schedule schedA : schedulesA) {
+                            for (Schedule schedB : schedulesB) {
+                                // Assuming at least 2 hours of travel time before they can catch the next train
+                                if (schedB.getDepartureTime().isAfter(schedA.getDepartureTime().plusHours(2))) {
+                                    pairedDepartureTimes.add(
+                                            "Train 1: " + schedA.getDepartureTime() +
+                                                    " | Train 2: " + schedB.getDepartureTime()
+                                    );
+                                }
+                            }
+                        }
+
+                        // Only add this trip option if there are actually valid connecting times!
+                        if (!pairedDepartureTimes.isEmpty()) {
+                            List<String> pathA = stopsA.subList(originIndex, i + 1)
+                                    .stream().map(rs -> rs.getStation().getName()).toList();
+                            List<String> pathB = stopsB.subList(changeoverIndexB + 1, destIndex + 1)
+                                    .stream().map(rs -> rs.getStation().getName()).toList();
+
+                            List<String> fullPath = new ArrayList<>(pathA);
+                            fullPath.addAll(pathB);
+
+                            results.add(TripOption.builder()
+                                    .stations(fullPath)
+                                    .trainNames(List.of(trainA.getName(), trainB.getName()))
+                                    .departureTimes(pairedDepartureTimes) // Use the paired times!
+                                    .requiresChangeover(true)
+                                    .build());
+                        }
                     }
                 }
             }
@@ -119,21 +148,4 @@ public class RouteFinderService {
         return trains.get(0).getName();
     }
 
-    private List<String> getDepartureTimes(Route... routes) {
-
-        List<String> departureTimes = new ArrayList<>();
-        for (Route route : routes) {
-
-            List<Train> trains = trainRepository.findByRouteId(route.getId());
-            if(trains.isEmpty()){ continue; }
-
-            for(Train train : trains){
-                scheduleRepository.findByTrainId(train.getId())
-                        .forEach(s -> departureTimes.add(s.getDepartureTime().toString()));
-            }
-        }
-
-        return departureTimes;
-
-    }
 }

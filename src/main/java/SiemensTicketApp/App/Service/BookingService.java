@@ -22,7 +22,7 @@ public class BookingService {
 
     @Transactional
     public Booking createBooking(BookingRequest request) {
-        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+        Schedule schedule = scheduleRepository.findByIdWithLock(request.getScheduleId())
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found"));
 
         int totalCapacity = schedule.getTrain().getCapacity();
