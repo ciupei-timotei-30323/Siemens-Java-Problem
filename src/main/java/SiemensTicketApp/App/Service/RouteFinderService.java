@@ -15,6 +15,7 @@ public class RouteFinderService {
     private final StationRepository stationRepository;
     private final RouteRepository routeRepository;
     private final ScheduleRepository scheduleRepository;
+    private final TrainRepository trainRepository;
 
     public List<TripOption> findTrips(String originName, String destinationName) {
         Station origin = stationRepository.findByName(originName)
@@ -25,27 +26,30 @@ public class RouteFinderService {
         List<TripOption> results = new ArrayList<>();
         List<Route> allRoutes = routeRepository.findAll();
 
-        // Check direct connections first
+        // Checking direct connections first
         for (Route route : allRoutes) {
             List<RouteStation> stops = route.getRouteStations();
             int originIndex = indexOfStation(stops, origin.getId());
             int destIndex = indexOfStation(stops, destination.getId());
+
+            List<Train> trains = trainRepository.findByRouteId(route.getId());
 
             if (originIndex != -1 && destIndex != -1 && originIndex < destIndex) {
                 // Direct connection found on this route
                 List<String> path = stops.subList(originIndex, destIndex + 1)
                         .stream().map(rs -> rs.getStation().getName()).toList();
 
-                List<Schedule> schedules = scheduleRepository.findByTrainId(
-                        route.getId() // will fix below — needs train lookup
-                );
+                List<Schedule> schedules = new ArrayList<>();
+                for (Train train : trains) {
+                    schedules.addAll(scheduleRepository.findByTrainId(train.getId()));
+                }
 
-                results.add(TripOption.builder()
-                        .stations(path)
-                        .trainNames(List.of(getTrainNameForRoute(route)))
-                        .departureTimes(getDepartureTimes(route))
-                        .requiresChangeover(false)
-                        .build());
+
+                List<String> trainNames = trains.stream().map(Train::getName).toList();
+                List<String> departureTimes = schedules.stream()
+                        .map(s -> s.getDepartureTime().toString()).toList();
+
+                results.add(new TripOption(path, trainNames, departureTimes, false));
             }
         }
 
@@ -104,19 +108,32 @@ public class RouteFinderService {
     }
 
     private String getTrainNameForRoute(Route route) {
-        return route.getRouteStations().isEmpty() ? "Unknown" :
-                scheduleRepository.findByTrainId(route.getId())
-                        .stream().findFirst()
-                        .map(s -> s.getTrain().getName())
-                        .orElse("Unknown");
+        if(route.getRouteStations().isEmpty()){
+            return "No train";
+        }
+        List<Train> trains = trainRepository.findByRouteId(route.getId());
+
+        if(trains.isEmpty()){
+            return "No train";
+        }
+        return trains.get(0).getName();
     }
 
     private List<String> getDepartureTimes(Route... routes) {
-        List<String> times = new ArrayList<>();
+
+        List<String> departureTimes = new ArrayList<>();
         for (Route route : routes) {
-            scheduleRepository.findByTrainId(route.getId())
-                    .forEach(s -> times.add(s.getDepartureTime().toString()));
+
+            List<Train> trains = trainRepository.findByRouteId(route.getId());
+            if(trains.isEmpty()){ continue; }
+
+            for(Train train : trains){
+                scheduleRepository.findByTrainId(train.getId())
+                        .forEach(s -> departureTimes.add(s.getDepartureTime().toString()));
+            }
         }
-        return times;
+
+        return departureTimes;
+
     }
 }
