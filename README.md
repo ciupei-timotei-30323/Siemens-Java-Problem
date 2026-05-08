@@ -1,6 +1,19 @@
-# 🚂 Train Ticketing Application
+
+
+# Train Ticketing Application
 
 A Spring Boot REST API for managing train bookings, routes, and schedules. Supports customer ticket booking with email confirmation, route search with changeover detection, and admin management operations.
+
+---
+
+## Solution Overview
+
+This application was designed to meet the following requirements:
+1. **Ticket Booking:** Users can book multiple tickets on a schedule. Overbooking is prevented via strict live capacity checks (`@Transactional` query), and an automated confirmation email is dispatched to the customer upon success.
+2. **Route Finding:** Users can search for possible connections between any two stations. The application detects **direct routes** as well as routes requiring a **single changeover**. It responds with an appropriate error if no viable path is available.
+3. **Admin Controls:** - Manage the entire topology by creating, modifying, and deleting **Stations**, **Routes**, and **Trains**.
+   - Review live **Bookings** made on any given train.
+   - Report **Delays** on specific schedules. When an administrator flags a delay, every customer who booked a ticket on that schedule automatically receives an email notification regarding the delay.
 
 ---
 
@@ -10,11 +23,9 @@ A Spring Boot REST API for managing train bookings, routes, and schedules. Suppo
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
-- [API Reference](#api-reference)
+- [API Reference & Examples](#api-reference--examples)
     - [Public Endpoints](#public-endpoints)
     - [Admin Endpoints](#admin-endpoints)
-- [Features](#features)
-- [Examples](#examples)
 - [Running Tests](#running-tests)
 
 ---
@@ -38,50 +49,22 @@ A Spring Boot REST API for managing train bookings, routes, and schedules. Suppo
 
 ## Project Structure
 
-```
+```text
 src/
 ├── main/
-│   ├── java/com/siemens/ticketapp/
-│   │   ├── TicketAppApplication.java
-│   │   ├── config/
-│   │   │   └── SecurityConfig.java
-│   │   ├── controller/
-│   │   │   ├── BookingController.java
-│   │   │   └── AdminController.java
-│   │   ├── dto/
-│   │   │   ├── BookingRequest.java
-│   │   │   ├── TripSearchRequest.java
-│   │   │   └── TripOption.java
-│   │   ├── exception/
-│   │   │   └── GlobalExceptionHandler.java
-│   │   ├── model/
-│   │   │   ├── Station.java
-│   │   │   ├── Route.java
-│   │   │   ├── RouteStation.java
-│   │   │   ├── Train.java
-│   │   │   ├── Schedule.java
-│   │   │   └── Booking.java
-│   │   ├── repository/
-│   │   │   ├── StationRepository.java
-│   │   │   ├── RouteRepository.java
-│   │   │   ├── RouteStationRepository.java
-│   │   │   ├── TrainRepository.java
-│   │   │   ├── ScheduleRepository.java
-│   │   │   └── BookingRepository.java
-│   │   └── service/
-│   │       ├── EmailService.java
-│   │       ├── BookingService.java
-│   │       ├── RouteFinderService.java
-│   │       └── AdminService.java
+│   ├── java/SiemensTicketApp/App/
+│   │   ├── Config/          # Security configs
+│   │   ├── Controller/      # REST API Endpoints
+│   │   ├── DTO/             # Request/Response payloads
+│   │   ├── Exception/       # Global error handling
+│   │   ├── Model/           # JPA Entities (Train, Route, Schedule, Booking, Station)
+│   │   ├── Repository/      # Spring Data JPA Repositories
+│   │   └── Service/         # Core business logic (Booking, Email, Routing, Admin)
 │   └── resources/
-│       ├── application.properties
-│       └── data.sql
-└── test/
-    └── java/com/siemens/ticketapp/
-        ├── BaseIntegrationTest.java
-        ├── BookingControllerTest.java
-        ├── RouteSearchControllerTest.java
-        └── AdminControllerTest.java
+│       ├── application.properties # App configs
+│       └── data.sql         # Seed data
+└── test/                    # Integration Tests
+
 ```
 
 ---
@@ -90,19 +73,16 @@ src/
 
 ### Prerequisites
 
-- Java 21+
-- Maven 3.8+
-- A free [Mailtrap](https://mailtrap.io) account (for email testing)
+* Java 21+
+* Maven 3.8+
+* A free [Mailtrap](https://mailtrap.io) account (for email testing)
 
 ### Running the Application
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/train-ticketing-app.git
-cd train-ticketing-app
+# Run the application using the Maven wrapper
+./mvnw spring-boot:run
 
-# Run the application
-mvn spring-boot:run
 ```
 
 The application starts on `http://localhost:8080`.
@@ -112,7 +92,7 @@ The application starts on `http://localhost:8080`.
 Navigate to `http://localhost:8080/h2-console` with these settings:
 
 | Field | Value |
-|---|---|
+| --- | --- |
 | JDBC URL | `jdbc:h2:mem:ticketdb` |
 | Username | `sa` |
 | Password | *(leave empty)* |
@@ -123,10 +103,10 @@ The database is pre-populated with sample data on startup via `data.sql`.
 
 ## Configuration
 
-Edit `src/main/resources/application.properties`:
+Edit `src/main/resources/application.properties` to ensure your email provider is set up:
 
 ```properties
-# Mail — replace with your Mailtrap credentials
+# Mail — replace with your Mailtrap credentials or other SMTP details
 spring.mail.host=sandbox.smtp.mailtrap.io
 spring.mail.port=2525
 spring.mail.username=YOUR_MAILTRAP_USERNAME
@@ -135,6 +115,7 @@ spring.mail.password=YOUR_MAILTRAP_PASSWORD
 # Admin credentials
 spring.security.user.name=admin
 spring.security.user.password=admin123
+
 ```
 
 ---
@@ -146,42 +127,34 @@ The following data is seeded automatically on startup:
 **Stations:** Budapest, Vienna, Bratislava, Prague, Warsaw
 
 **Routes:**
-- `Budapest-Vienna Express`: Budapest → Bratislava → Vienna
-- `Vienna-Prague Express`: Vienna → Bratislava → Prague
 
-**Trains:**
-- `IC-101` (capacity: 100) on the Budapest-Vienna route
-- `IC-202` (capacity: 80) on the Vienna-Prague route
+* `Budapest-Vienna Express`: Budapest → Bratislava → Vienna
+* `Vienna-Prague Express`: Vienna → Bratislava → Prague
 
-**Schedules:**
-- IC-101: 08:00 and 14:00 on 2026-06-01
-- IC-202: 09:00 and 16:00 on 2026-06-01
+**Trains & Schedules:**
+
+* `IC-101` (capacity: 100) on Budapest-Vienna (Schedules: 08:00 and 14:00 on 2026-06-01)
+* `IC-202` (capacity: 80) on Vienna-Prague (Schedules: 09:00 and 16:00 on 2026-06-01)
 
 ---
 
-## API Reference
+## API Reference & Examples
 
 ### Authentication
 
-- **Public endpoints** (`/api/public/**`) — no authentication required
-- **Admin endpoints** (`/api/admin/**`) — HTTP Basic Auth required
-
-```
-Username: admin
-Password: admin123
-```
+* **Public endpoints** (`/api/public/`) — no authentication required
+* **Admin endpoints** (`/api/admin/`) — HTTP Basic Auth required (`Username: admin`, `Password: admin123`)
 
 ---
 
 ### Public Endpoints
 
-#### Book a Ticket
+#### 1. Book a Ticket
 
-```
-POST /api/public/book
-```
+`POST /api/public/book`
 
-**Request body:**
+**Request:**
+
 ```json
 {
   "scheduleId": 1,
@@ -189,9 +162,11 @@ POST /api/public/book
   "customerEmail": "john@example.com",
   "seatsBooked": 2
 }
+
 ```
 
-**Success response (200 OK):**
+**Success Response (200 OK):**
+
 ```json
 {
   "id": 1,
@@ -205,46 +180,40 @@ POST /api/public/book
       "capacity": 100
     }
   },
-  "customerName": "John Doe",
   "customerEmail": "john@example.com",
+  "customerName": "John Doe",
   "seatsBooked": 2
 }
+
 ```
 
-**Overbooking error (409 Conflict):**
+*(An email confirmation is asynchronously sent to `john@example.com`)*
+
+**Overbooking Error Response (409 Conflict):**
+
 ```json
 {
-  "error": "Not enough seats available. Requested: 999, Available: 100"
+  "error": "Not enough seats available. Requested: 5, Available: 2"
 }
-```
-
-**Validation error (400 Bad Request):**
-```json
-{
-  "customerEmail": "Invalid email address",
-  "seatsBooked": "Must book at least 1 seat"
-}
-```
-
-> A confirmation email is sent to the provided address after every successful booking.
-
----
-
-#### Search for Trips
 
 ```
-POST /api/public/search
-```
 
-**Request body:**
+#### 2. Search for Trips
+
+`POST /api/public/search`
+
+**Request (Direct Connection Search):**
+
 ```json
 {
   "origin": "Budapest",
   "destination": "Vienna"
 }
+
 ```
 
-**Direct connection response (200 OK):**
+**Response (200 OK):**
+
 ```json
 [
   {
@@ -254,94 +223,230 @@ POST /api/public/search
     "requiresChangeover": false
   }
 ]
+
 ```
 
-**Changeover connection (Budapest → Prague):**
+**Request (Changeover Search - Budapest to Prague):**
+
+```json
+{
+  "origin": "Budapest",
+  "destination": "Prague"
+}
+
+```
+
+**Response (200 OK):**
+
 ```json
 [
   {
     "stations": ["Budapest", "Bratislava", "Vienna", "Prague"],
     "trainNames": ["IC-101", "IC-202"],
-    "departureTimes": ["2026-06-01T08:00:00", "2026-06-01T09:00:00"],
+    "departureTimes": [
+      "Train 1: 2026-06-01T08:00 | Train 2: 2026-06-01T16:00"
+    ],
     "requiresChangeover": true
   }
 ]
+
 ```
 
-**No connection found (400 Bad Request):**
+**No Route Found Response (400 Bad Request):**
+
 ```json
 {
   "error": "No connection found between Budapest and Warsaw"
 }
-```
 
-**Unknown station (400 Bad Request):**
-```json
-{
-  "error": "Destination station not found: Tokyo"
-}
 ```
 
 ---
 
 ### Admin Endpoints
 
-All admin endpoints require Basic Auth (`admin` / `admin123`).
+All admin operations require Basic Auth (`admin` / `admin123`).
 
-#### Train Management
+#### 1. Station Management
 
 | Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/admin/trains` | List all trains |
+| --- | --- | --- |
+| POST | `/api/admin/station` | Add a new station |
+| PUT | `/api/admin/station/{id}` | Modify an existing station |
+| DELETE | `/api/admin/station/{id}` | Delete a station |
+
+**Create a Station Request:**
+`POST /api/admin/station`
+
+```json
+{
+  "name": "Berlin"
+}
+
+```
+
+**Create a Station Response (200 OK):**
+
+```json
+{
+  "id": 6,
+  "name": "Berlin"
+}
+
+```
+
+**Modify a Station Request:**
+`PUT /api/admin/station/6`
+
+```json
+{
+  "name": "Berlin Hbf"
+}
+
+```
+
+**Modify a Station Response (200 OK):**
+
+```json
+{
+  "id": 6,
+  "name": "Berlin Hbf"
+}
+
+```
+
+**Delete a Station:**
+`DELETE /api/admin/station/6`
+Returns: `204 No Content`
+
+---
+
+#### 2. Route Management
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/admin/routes` | View all routes |
+| POST | `/api/admin/routes` | Add a new route |
+| PUT | `/api/admin/routes/{id}` | Modify an existing route |
+| DELETE | `/api/admin/routes/{id}` | Delete a route |
+
+**Add Route Request:**
+`POST /api/admin/routes`
+
+```json
+{
+  "name": "Berlin Express",
+  "routeStationsId": [4, 6]
+}
+
+```
+
+**Add Route Response (200 OK):**
+
+```json
+{
+  "id": 3,
+  "name": "Berlin Express",
+  "routeStations": [
+    {
+      "id": 7,
+      "station": { "id": 4, "name": "Prague" },
+      "stopOrder": 0
+    },
+    {
+      "id": 8,
+      "station": { "id": 6, "name": "Berlin Hbf" },
+      "stopOrder": 1
+    }
+  ]
+}
+
+```
+
+**Modify Route Request (Updates order/stations):**
+`PUT /api/admin/routes/3`
+
+```json
+{
+  "name": "Berlin Fast Express",
+  "routeStationsId": [2, 4, 6]
+}
+
+```
+
+**Delete a Route:**
+`DELETE /api/admin/routes/3`
+Returns: `204 No Content`
+
+---
+
+#### 3. Train Management
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/admin/trains` | View all trains |
 | POST | `/api/admin/trains` | Add a new train |
-| PUT | `/api/admin/trains/{id}` | Update a train |
+| PUT | `/api/admin/trains/{id}` | Modify an existing train |
 | DELETE | `/api/admin/trains/{id}` | Delete a train |
 
-**Add a train — request:**
+**Add Train Request:**
+`POST /api/admin/trains`
+
 ```json
 {
   "name": "IC-303",
   "capacity": 120,
-  "route": { "id": 1 }
+  "routeId": 1
 }
+
 ```
 
-**Add a train — response (200 OK):**
+**Add Train Response (200 OK):**
+
 ```json
 {
   "id": 3,
   "name": "IC-303",
   "capacity": 120,
-  "route": { "id": 1, "name": "Budapest-Vienna Express" }
+  "route": {
+    "id": 1,
+    "name": "Budapest-Vienna Express",
+    "routeStations": [...]
+  }
 }
+
 ```
+
+**Modify Train Request (Update name/capacity/route):**
+`PUT /api/admin/trains/3`
+
+```json
+{
+  "name": "IC-303-Updated",
+  "capacity": 150,
+  "routeId": 2
+}
+
+```
+
+**Delete a Train:**
+`DELETE /api/admin/trains/3`
+Returns: `204 No Content`
 
 ---
 
-#### Route Management
+#### 4. View Bookings for a Train
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/admin/routes` | List all routes |
-| POST | `/api/admin/routes` | Add a new route |
-| PUT | `/api/admin/routes/{id}` | Update a route |
-| DELETE | `/api/admin/routes/{id}` | Delete a route |
-
----
-
-#### View Bookings for a Train
-
-```
-GET /api/admin/trains/{trainId}/bookings
-```
+`GET /api/admin/trains/{trainId}/bookings`
 
 **Response (200 OK):**
+
 ```json
 [
   {
     "id": 1,
-    "customerName": "John Doe",
     "customerEmail": "john@example.com",
+    "customerName": "John Doe",
     "seatsBooked": 2,
     "schedule": {
       "id": 1,
@@ -349,68 +454,49 @@ GET /api/admin/trains/{trainId}/bookings
     }
   }
 ]
+
 ```
 
 ---
 
-#### Report a Train Delay
+#### 5. Report a Train Delay
 
-```
-POST /api/admin/schedules/{scheduleId}/delay?minutes=30
-```
+Allows admins to register delays on a given schedule. *This automatically dispatches an email to all customers who booked a ticket for this specific schedule.*
+
+`POST /api/admin/schedules/{scheduleId}/delay?minutes=30`
 
 **Response (200 OK):**
+
 ```
 Delay reported and customers notified.
+
 ```
-
-> All customers with bookings on this schedule are automatically sent a delay notification email.
-
----
-
-## Features
-
-### Overbooking Prevention
-
-Booking uses a `@Transactional` method with a live seat count query, preventing race conditions when multiple users book simultaneously. If requested seats exceed availability, a `409 Conflict` is returned.
-
-### Route Finding
-
-The route search supports:
-- **Direct connections** — both stations on the same route in the correct order
-- **One-changeover connections** — a shared intermediate station between two routes
-
-If no connection exists, a clear error message is returned.
-
-### Email Notifications
-
-Two types of emails are sent automatically:
-
-- **Booking confirmation** — sent to the customer after a successful booking
-- **Delay notification** — sent to all affected customers when an admin reports a delay
-
-Emails are handled by `EmailService` and sent via SMTP. Failures are logged but do not break the booking flow.
 
 ---
 
 ## Running Tests
 
+Run the integration tests using Maven:
+
 ```bash
-mvn test
+./mvnw test
+
 ```
 
-The test suite uses `MockMvc` integration tests covering:
+The test suite leverages `MockMvc` to guarantee application stability, ensuring:
 
-- Successful ticket booking
-- Overbooking prevention
-- Validation errors (invalid email, zero seats)
-- Direct route search
-- Changeover route search
-- Unknown and unconnected stations
-- Admin authentication (authorized and unauthorized)
-- Delay reporting
+* Successful ticket booking logic
+* Prevention of concurrency-based overbooking
+* Input validation (invalid emails, bad capacities)
+* Direct routing search algorithms
+* One-changeover routing search algorithms
+* Security rules mapping out unauthenticated Admin requests
+* Delay report mechanisms and notifications
 
-Expected output:
+**Expected output:**
+
 ```
 Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
 ```
+
+---
